@@ -2,14 +2,13 @@ package main
 
 import "strconv"
 
-type Token = int
+type Token int
 
 const (
 	EOF Token = iota
 	PLUS
 	MINUS
 	ASSIGN
-	SEMICOLON
 	LOOP
 	DO
 	END
@@ -17,13 +16,15 @@ const (
 	NUM
 )
 
-func Lex(input string) ([]Token, []string, []int) {
+func Lex(input string) ([]Token, int, []int, []int) {
+	input += "\n"
 	var tokens = make([]Token, 0)
 	var currentRaw = ""
-	var idents = make([]string, 0)
+	var uniqueIdents = make(map[string]int)
+	var idents = make([]int, 0)
 	var numbers = make([]int, 0)
 	for _, char := range input {
-		if char != ' ' && char != '\t' && char != '\n' {
+		if char != ' ' && char != '\t' && char != '\n' && char != ';' {
 			currentRaw += string(char)
 
 			switch currentRaw {
@@ -39,9 +40,6 @@ func Lex(input string) ([]Token, []string, []int) {
 			case ":=":
 				tokens = append(tokens, ASSIGN)
 				currentRaw = ""
-			case ";":
-				//tokens = append(tokens, SEMICOLON)
-				currentRaw = ""
 			case "LOOP":
 				tokens = append(tokens, LOOP)
 				currentRaw = ""
@@ -56,7 +54,10 @@ func Lex(input string) ([]Token, []string, []int) {
 			if currentRaw != "" {
 				var num, err = strconv.Atoi(currentRaw)
 				if err != nil {
-					idents = append(idents, currentRaw)
+					if _, ok := uniqueIdents[currentRaw]; !ok {
+						uniqueIdents[currentRaw] = len(uniqueIdents)
+					}
+					idents = append(idents, uniqueIdents[currentRaw])
 					tokens = append(tokens, IDENT)
 				} else {
 					numbers = append(numbers, num)
@@ -67,5 +68,9 @@ func Lex(input string) ([]Token, []string, []int) {
 		}
 	}
 	tokens = append(tokens, EOF)
-	return tokens, idents, numbers
+	return tokens, len(uniqueIdents), idents, numbers
+}
+
+func (t Token) String() string {
+	return [...]string{"EOF", "PLUS", "MINUS", "ASSIGN", "LOOP", "DO", "END", "IDENT", "NUM"}[t]
 }

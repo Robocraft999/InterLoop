@@ -4,22 +4,23 @@ import "fmt"
 
 type Interpreter struct {
 	tokens       []Token
-	idents       []string
+	idents       []int
 	identCount   int
 	numbers      []int
 	numbersCount int
-	vars         map[string]int
+	vars         []int
 	index        int
 }
 
-func NewInterpreter(tokens []Token, indents []string, numbers []int) *Interpreter {
+func NewInterpreter(tokens []Token, identsCount int, indents []int, numbers []int) *Interpreter {
+	var vars = make([]int, identsCount)
 	return &Interpreter{
 		tokens:       tokens,
 		idents:       indents,
 		identCount:   0,
 		numbers:      numbers,
 		numbersCount: 0,
-		vars:         make(map[string]int),
+		vars:         vars,
 		index:        0,
 	}
 }
@@ -28,11 +29,13 @@ func (i *Interpreter) Interpret() {
 	for i.current() != EOF {
 		i.interpretStatement()
 	}
+	for x, v := range i.vars {
+		fmt.Println(x, ": ", v)
+	}
 }
 
 func (i *Interpreter) interpretStatement() {
 	var current = i.advance()
-	fmt.Println(i.index, current)
 	switch current {
 	case LOOP:
 		{
@@ -124,13 +127,6 @@ func (i *Interpreter) advance() Token {
 
 func (i *Interpreter) current() Token {
 	return i.tokens[i.index]
-}
-
-func (i *Interpreter) peek() Token {
-	if i.index+1 >= len(i.tokens) {
-		return EOF
-	}
-	return i.tokens[i.index+1]
 }
 
 func (i *Interpreter) jumpToEnd() {
