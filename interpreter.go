@@ -26,11 +26,15 @@ func NewInterpreter(tokens []Token, identsCount int, indents []int, numbers []in
 }
 
 func (i *Interpreter) Interpret() {
-	for i.current() != EOF {
-		i.interpretStatement()
-	}
+	i.interpretStatements()
 	for x, v := range i.vars {
 		fmt.Println(x, ": ", v)
+	}
+}
+
+func (i *Interpreter) interpretStatements() {
+	for i.current() != EOF && i.current() != END {
+		i.interpretStatement()
 	}
 }
 
@@ -39,21 +43,26 @@ func (i *Interpreter) interpretStatement() {
 	switch current {
 	case LOOP:
 		{
+
 			var identToken = i.advance()
 			if identToken != IDENT {
 				panic("Expected IDENT in LOOP head")
 			}
+			var loopAmountIndex = i.identCount
+			i.identCount++
+
+			//fmt.Println("LOOP START WITH ", i.idents[loopAmountIndex], " = ", i.vars[i.idents[loopAmountIndex]])
+
 			var doToken = i.advance()
 			if doToken != DO {
 				panic("Expected DO in LOOP head")
 			}
 
-			var loopAmountVar = i.idents[i.identCount]
-			var loopAmount = i.vars[loopAmountVar]
-			i.identCount++
+			var loopAmount = i.vars[i.idents[loopAmountIndex]]
 
 			if loopAmount == 0 {
 				i.jumpToEnd()
+				//fmt.Println("LOOP SKIPPED\n")
 				return
 			}
 
@@ -63,17 +72,18 @@ func (i *Interpreter) interpretStatement() {
 				var currentNumbersCount = i.numbersCount
 
 				for range loopAmount - 1 {
-					i.interpretStatement()
+					i.interpretStatements()
 					i.index = currentPc
 					i.identCount = currentIdentCount
 					i.numbersCount = currentNumbersCount
 				}
 			}
-			i.interpretStatement()
+			i.interpretStatements()
 			var endToken = i.advance()
 			if endToken != END {
 				panic("Expected END in LOOP tail")
 			}
+			//fmt.Println("LOOP END\n")
 		}
 	case IDENT:
 		{
@@ -101,8 +111,10 @@ func (i *Interpreter) interpretStatement() {
 			var number = i.numbers[numberIndex]
 
 			if operationToken == PLUS {
+				//fmt.Println(i.idents[currentIdentIndex], "=", i.vars[i.idents[otherIdentIndex]]+number)
 				i.vars[i.idents[currentIdentIndex]] = i.vars[i.idents[otherIdentIndex]] + number
 			} else if operationToken == MINUS {
+				//fmt.Println(i.idents[currentIdentIndex], "=", i.vars[i.idents[otherIdentIndex]]-number)
 				i.vars[i.idents[currentIdentIndex]] = i.vars[i.idents[otherIdentIndex]] - number
 			} else {
 				panic("Expected PLUS or MINUS in statement")
@@ -139,7 +151,11 @@ func (i *Interpreter) jumpToEnd() {
 			count++
 		} else if tok == END {
 			count--
+		} else if tok == IDENT {
+			i.identCount++
+		} else if tok == NUM {
+			i.numbersCount++
 		}
 	}
-	i.index = j + 1
+	i.index = j
 }

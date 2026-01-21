@@ -1,6 +1,9 @@
 package main
 
-import "strconv"
+import (
+	"fmt"
+	"strconv"
+)
 
 type Token int
 
@@ -68,6 +71,8 @@ func Lex(input string) ([]Token, int, []int, []int) {
 		}
 	}
 	tokens = append(tokens, EOF)
+	fmt.Println(uniqueIdents)
+	//fmt.Println(idents)
 	return tokens, len(uniqueIdents), idents, numbers
 }
 
