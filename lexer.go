@@ -27,7 +27,7 @@ func Lex(input string) ([]Token, int, []int, []int) {
 	var idents = make([]int, 0)
 	var numbers = make([]int, 0)
 	for _, char := range input {
-		if char != ' ' && char != '\t' && char != '\n' && char != ';' {
+		if char != ' ' && char != '\t' && char != '\n' && char != ';' && char != '\r' {
 			currentRaw += string(char)
 
 			switch currentRaw {
