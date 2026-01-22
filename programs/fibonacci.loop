@@ -1,0 +1,20 @@
+n := n + 30
+a := zero + 0
+b := zero + 1
+LOOP n DO
+    sum := zero + 0
+    LOOP a DO
+        sum := sum + 1
+    END
+    LOOP b DO
+        sum := sum + 1
+    END
+    a := zero + 0
+    LOOP b DO
+        a := a + 1
+    END
+    b := zero + 0
+    LOOP sum DO
+        b := b + 1
+    END
+END

@@ -1,0 +1,8 @@
+x := x + 500000
+y := y + 500000
+LOOP x DO
+    z := z + 1
+END
+LOOP y DO
+    z := z + 1
+END
