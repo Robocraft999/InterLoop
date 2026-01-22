@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-const SYNTAX_CHECK_ENABLED bool = true
+const SYNTAX_CHECK_ENABLED bool = false
 
 func main() {
 	var reader = bufio.NewReader(os.Stdin)

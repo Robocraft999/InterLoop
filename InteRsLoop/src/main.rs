@@ -1,6 +1,6 @@
 use std::{collections::HashMap, io::{self, Read}};
 
-const SYNTAX_CHECK_ENABLED: bool = true;
+const SYNTAX_CHECK_ENABLED: bool = false;
 
 macro_rules! expect_token {
     ($inter:expr, $x:expr) => {
