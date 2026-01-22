@@ -40,91 +40,85 @@ func (i *Interpreter) interpretStatements() {
 
 func (i *Interpreter) interpretStatement() {
 	var current = i.advance()
-	switch current {
-	case LOOP:
-		{
-
-			var identToken = i.advance()
-			if identToken != IDENT {
-				panic("Expected IDENT in LOOP head")
-			}
-			var loopAmountIndex = i.identCount
-			i.identCount++
-
-			//fmt.Println("LOOP START WITH ", i.idents[loopAmountIndex], " = ", i.vars[i.idents[loopAmountIndex]])
-
-			var doToken = i.advance()
-			if doToken != DO {
-				panic("Expected DO in LOOP head")
-			}
-
-			var loopAmount = i.vars[i.idents[loopAmountIndex]]
-
-			if loopAmount == 0 {
-				i.jumpToEnd()
-				//fmt.Println("LOOP SKIPPED\n")
-				return
-			}
-
-			if loopAmount > 1 {
-				var currentPc = i.index
-				var currentIdentCount = i.identCount
-				var currentNumbersCount = i.numbersCount
-
-				for range loopAmount - 1 {
-					i.interpretStatements()
-					i.index = currentPc
-					i.identCount = currentIdentCount
-					i.numbersCount = currentNumbersCount
-				}
-			}
-			i.interpretStatements()
-			var endToken = i.advance()
-			if endToken != END {
-				panic("Expected END in LOOP tail")
-			}
-			//fmt.Println("LOOP END\n")
+	if current == LOOP {
+		var identToken = i.advance()
+		if SYNTAX_CHECK_ENABLED && identToken != IDENT {
+			panic("Expected IDENT in LOOP head")
 		}
-	case IDENT:
-		{
-			var currentIdentIndex = i.identCount
-			i.identCount++
-			var assignToken = i.advance()
-			if assignToken != ASSIGN {
-				panic("Expected ASSIGN in statement")
-			}
-			var otherVarToken = i.advance()
-			if otherVarToken != IDENT {
-				panic("Expected IDENT in statement")
-			}
-			var otherIdentIndex = i.identCount
-			i.identCount++
+		var loopAmountIndex = i.identCount
+		i.identCount++
 
-			var operationToken = i.advance()
+		//fmt.Println("LOOP START WITH ", i.idents[loopAmountIndex], " = ", i.vars[i.idents[loopAmountIndex]])
 
-			var numberToken = i.advance()
-			if numberToken != NUM {
-				panic("Expected NUM in statement")
-			}
-			var numberIndex = i.numbersCount
-			i.numbersCount++
-			var number = i.numbers[numberIndex]
-
-			if operationToken == PLUS {
-				//fmt.Println(i.idents[currentIdentIndex], "=", i.vars[i.idents[otherIdentIndex]]+number)
-				i.vars[i.idents[currentIdentIndex]] = i.vars[i.idents[otherIdentIndex]] + number
-			} else if operationToken == MINUS {
-				//fmt.Println(i.idents[currentIdentIndex], "=", i.vars[i.idents[otherIdentIndex]]-number)
-				i.vars[i.idents[currentIdentIndex]] = i.vars[i.idents[otherIdentIndex]] - number
-			} else {
-				panic("Expected PLUS or MINUS in statement")
-			}
-
+		var doToken = i.advance()
+		if SYNTAX_CHECK_ENABLED && doToken != DO {
+			panic("Expected DO in LOOP head")
 		}
-	default:
-		{
-			panic("unreachable")
+
+		var loopAmount = i.vars[i.idents[loopAmountIndex]]
+
+		if loopAmount == 0 {
+			i.jumpToEnd()
+			//fmt.Println("LOOP SKIPPED\n")
+			return
 		}
+
+		if loopAmount > 1 {
+			var currentPc = i.index
+			var currentIdentCount = i.identCount
+			var currentNumbersCount = i.numbersCount
+
+			for range loopAmount - 1 {
+				i.interpretStatements()
+				i.index = currentPc
+				i.identCount = currentIdentCount
+				i.numbersCount = currentNumbersCount
+			}
+		}
+		i.interpretStatements()
+		var endToken = i.advance()
+		if SYNTAX_CHECK_ENABLED && endToken != END {
+			panic("Expected END in LOOP tail")
+		}
+		//fmt.Println("LOOP END\n")
+		return
+	}
+	if current == IDENT {
+		var currentIdentIndex = i.identCount
+		i.identCount++
+		var assignToken = i.advance()
+		if SYNTAX_CHECK_ENABLED && assignToken != ASSIGN {
+			panic("Expected ASSIGN in statement")
+		}
+		var otherVarToken = i.advance()
+		if SYNTAX_CHECK_ENABLED && otherVarToken != IDENT {
+			panic("Expected IDENT in statement")
+		}
+		var otherIdentIndex = i.identCount
+		i.identCount++
+
+		var operationToken = i.advance()
+
+		var numberToken = i.advance()
+		if SYNTAX_CHECK_ENABLED && numberToken != NUM {
+			panic("Expected NUM in statement")
+		}
+		var numberIndex = i.numbersCount
+		i.numbersCount++
+		var number = i.numbers[numberIndex]
+
+		if operationToken == PLUS {
+			//fmt.Println(i.idents[currentIdentIndex], "=", i.vars[i.idents[otherIdentIndex]]+number)
+			i.vars[i.idents[currentIdentIndex]] = i.vars[i.idents[otherIdentIndex]] + number
+		}
+		if operationToken == MINUS {
+			//fmt.Println(i.idents[currentIdentIndex], "=", i.vars[i.idents[otherIdentIndex]]-number)
+			i.vars[i.idents[currentIdentIndex]] = i.vars[i.idents[otherIdentIndex]] - number
+		}
+		if SYNTAX_CHECK_ENABLED && operationToken != PLUS && operationToken != MINUS {
+			panic("Expected PLUS or MINUS in statement")
+		}
+		return
 	}
 }
 

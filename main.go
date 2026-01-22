@@ -6,6 +6,8 @@ import (
 	"os"
 )
 
+const SYNTAX_CHECK_ENABLED bool = false
+
 func main() {
 	var reader = bufio.NewReader(os.Stdin)
 	var bytes = make([]byte, 1024)
