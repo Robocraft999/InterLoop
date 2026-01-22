@@ -33,27 +33,28 @@ func (i *Interpreter) Interpret() {
 }
 
 func (i *Interpreter) interpretStatements() {
-	for i.current() != EOF && i.current() != END {
+	for c := i.current(); c != EOF && c != END; {
 		i.interpretStatement()
 	}
 }
 
 func (i *Interpreter) interpretStatement() {
-	var current = i.advance()
+	var current = i.current()
+	i.index++
 	if current == LOOP {
-		var identToken = i.advance()
-		if SYNTAX_CHECK_ENABLED && identToken != IDENT {
+		if SYNTAX_CHECK_ENABLED && i.current() != IDENT {
 			panic("Expected IDENT in LOOP head")
 		}
+		i.index++
+
 		var loopAmountIndex = i.identCount
 		i.identCount++
 
 		//fmt.Println("LOOP START WITH ", i.idents[loopAmountIndex], " = ", i.vars[i.idents[loopAmountIndex]])
-
-		var doToken = i.advance()
-		if SYNTAX_CHECK_ENABLED && doToken != DO {
+		if SYNTAX_CHECK_ENABLED && i.current() != DO {
 			panic("Expected DO in LOOP head")
 		}
+		i.index++
 
 		var loopAmount = i.vars[i.idents[loopAmountIndex]]
 
@@ -76,33 +77,37 @@ func (i *Interpreter) interpretStatement() {
 			}
 		}
 		i.interpretStatements()
-		var endToken = i.advance()
-		if SYNTAX_CHECK_ENABLED && endToken != END {
+
+		if SYNTAX_CHECK_ENABLED && i.current() != END {
 			panic("Expected END in LOOP tail")
 		}
+		i.index++
 		//fmt.Println("LOOP END\n")
 		return
 	}
 	if current == IDENT {
 		var currentIdentIndex = i.identCount
 		i.identCount++
-		var assignToken = i.advance()
-		if SYNTAX_CHECK_ENABLED && assignToken != ASSIGN {
+
+		if SYNTAX_CHECK_ENABLED && i.current() != ASSIGN {
 			panic("Expected ASSIGN in statement")
 		}
-		var otherVarToken = i.advance()
-		if SYNTAX_CHECK_ENABLED && otherVarToken != IDENT {
+		i.index++
+
+		if SYNTAX_CHECK_ENABLED && i.current() != IDENT {
 			panic("Expected IDENT in statement")
 		}
+		i.index++
 		var otherIdentIndex = i.identCount
 		i.identCount++
 
-		var operationToken = i.advance()
+		var operationToken = i.current()
+		i.index++
 
-		var numberToken = i.advance()
-		if SYNTAX_CHECK_ENABLED && numberToken != NUM {
+		if SYNTAX_CHECK_ENABLED && i.current() != NUM {
 			panic("Expected NUM in statement")
 		}
+		i.index++
 		var numberIndex = i.numbersCount
 		i.numbersCount++
 		var number = i.numbers[numberIndex]
@@ -122,15 +127,6 @@ func (i *Interpreter) interpretStatement() {
 	}
 }
 
-func (i *Interpreter) advance() Token {
-	if i.index >= len(i.tokens) {
-		return EOF
-	}
-	var current = i.tokens[i.index]
-	i.index++
-	return current
-}
-
 func (i *Interpreter) current() Token {
 	return i.tokens[i.index]
 }
@@ -143,11 +139,14 @@ func (i *Interpreter) jumpToEnd() {
 		var tok = i.tokens[j]
 		if tok == LOOP {
 			count++
-		} else if tok == END {
+		}
+		if tok == END {
 			count--
-		} else if tok == IDENT {
+		}
+		if tok == IDENT {
 			i.identCount++
-		} else if tok == NUM {
+		}
+		if tok == NUM {
 			i.numbersCount++
 		}
 	}
