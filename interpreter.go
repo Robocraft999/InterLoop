@@ -3,25 +3,20 @@ package main
 import "fmt"
 
 type Interpreter struct {
-	tokens       []Token
-	idents       []int
-	identCount   int
-	numbers      []int
-	numbersCount int
-	vars         []int
-	index        int
+	tokens     []Token
+	valIndices []int
+	valIndex   int
+	vars       []int
+	index      int
 }
 
-func NewInterpreter(tokens []Token, identsCount int, indents []int, numbers []int) *Interpreter {
-	var vars = make([]int, identsCount)
+func NewInterpreter(tokens []Token, valIndices []int, vars []int) *Interpreter {
 	return &Interpreter{
-		tokens:       tokens,
-		idents:       indents,
-		identCount:   0,
-		numbers:      numbers,
-		numbersCount: 0,
-		vars:         vars,
-		index:        0,
+		tokens:     tokens,
+		valIndices: valIndices,
+		valIndex:   0,
+		vars:       vars,
+		index:      0,
 	}
 }
 
@@ -33,7 +28,7 @@ func (i *Interpreter) Interpret() {
 }
 
 func (i *Interpreter) interpretStatements() {
-	for c := i.current(); c != EOF && c != END; {
+	for i.current() != EOF && i.current() != END {
 		i.interpretStatement()
 	}
 }
@@ -47,16 +42,16 @@ func (i *Interpreter) interpretStatement() {
 		}
 		i.index++
 
-		var loopAmountIndex = i.identCount
-		i.identCount++
+		var loopAmountIndex = i.valIndex
+		i.valIndex++
 
-		//fmt.Println("LOOP START WITH ", i.idents[loopAmountIndex], " = ", i.vars[i.idents[loopAmountIndex]])
+		//fmt.Println("LOOP START WITH ", i.valIndices[loopAmountIndex], " = ", i.vars[i.valIndices[loopAmountIndex]])
 		if SYNTAX_CHECK_ENABLED && i.current() != DO {
 			panic("Expected DO in LOOP head")
 		}
 		i.index++
 
-		var loopAmount = i.vars[i.idents[loopAmountIndex]]
+		var loopAmount = i.vars[i.valIndices[loopAmountIndex]]
 
 		if loopAmount == 0 {
 			i.jumpToEnd()
@@ -66,14 +61,12 @@ func (i *Interpreter) interpretStatement() {
 
 		if loopAmount > 1 {
 			var currentPc = i.index
-			var currentIdentCount = i.identCount
-			var currentNumbersCount = i.numbersCount
+			var currentValIndex = i.valIndex
 
 			for range loopAmount - 1 {
 				i.interpretStatements()
 				i.index = currentPc
-				i.identCount = currentIdentCount
-				i.numbersCount = currentNumbersCount
+				i.valIndex = currentValIndex
 			}
 		}
 		i.interpretStatements()
@@ -86,8 +79,8 @@ func (i *Interpreter) interpretStatement() {
 		return
 	}
 	if current == IDENT {
-		var currentIdentIndex = i.identCount
-		i.identCount++
+		var currentIdentIndex = i.valIndex
+		i.valIndex++
 
 		if SYNTAX_CHECK_ENABLED && i.current() != ASSIGN {
 			panic("Expected ASSIGN in statement")
@@ -98,8 +91,8 @@ func (i *Interpreter) interpretStatement() {
 			panic("Expected IDENT in statement")
 		}
 		i.index++
-		var otherIdentIndex = i.identCount
-		i.identCount++
+		var otherIdentIndex = i.valIndex
+		i.valIndex++
 
 		var operationToken = i.current()
 		i.index++
@@ -108,17 +101,17 @@ func (i *Interpreter) interpretStatement() {
 			panic("Expected NUM in statement")
 		}
 		i.index++
-		var numberIndex = i.numbersCount
-		i.numbersCount++
-		var number = i.numbers[numberIndex]
+		var numberIndex = i.valIndex
+		i.valIndex++
+		var number = i.vars[i.valIndices[numberIndex]]
 
 		if operationToken == PLUS {
-			//fmt.Println(i.idents[currentIdentIndex], "=", i.vars[i.idents[otherIdentIndex]]+number)
-			i.vars[i.idents[currentIdentIndex]] = i.vars[i.idents[otherIdentIndex]] + number
+			//fmt.Println(i.valIndices[currentIdentIndex], "=", i.vars[i.valIndices[otherIdentIndex]]+number)
+			i.vars[i.valIndices[currentIdentIndex]] = i.vars[i.valIndices[otherIdentIndex]] + number
 		}
 		if operationToken == MINUS {
-			//fmt.Println(i.idents[currentIdentIndex], "=", i.vars[i.idents[otherIdentIndex]]-number)
-			i.vars[i.idents[currentIdentIndex]] = i.vars[i.idents[otherIdentIndex]] - number
+			//fmt.Println(i.valIndices[currentIdentIndex], "=", i.vars[i.valIndices[otherIdentIndex]]-number)
+			i.vars[i.valIndices[currentIdentIndex]] = i.vars[i.valIndices[otherIdentIndex]] - number
 		}
 		if SYNTAX_CHECK_ENABLED && operationToken != PLUS && operationToken != MINUS {
 			panic("Expected PLUS or MINUS in statement")
@@ -143,11 +136,8 @@ func (i *Interpreter) jumpToEnd() {
 		if tok == END {
 			count--
 		}
-		if tok == IDENT {
-			i.identCount++
-		}
-		if tok == NUM {
-			i.numbersCount++
+		if tok == IDENT || tok == NUM {
+			i.valIndex++
 		}
 	}
 	i.index = j

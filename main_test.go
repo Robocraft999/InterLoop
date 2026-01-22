@@ -5,8 +5,8 @@ import (
 )
 
 func run(input string) {
-	var tokens, identsCount, idents, numbers = Lex(input)
-	var interpreter = NewInterpreter(tokens, identsCount, idents, numbers)
+	var tokens, valIndices, vars = Lex(input)
+	var interpreter = NewInterpreter(tokens, valIndices, vars)
 	interpreter.Interpret()
 }
 

@@ -19,13 +19,14 @@ const (
 	NUM
 )
 
-func Lex(input string) ([]Token, int, []int, []int) {
+func Lex(input string) ([]Token, []int, []int) {
 	input += "\n"
 	var tokens = make([]Token, 0)
 	var currentRaw = ""
 	var uniqueIdents = make(map[string]int)
-	var idents = make([]int, 0)
-	var numbers = make([]int, 0)
+	var valIndices = make([]int, 0)
+	var uniqueNumbers = make(map[int]int)
+	var vars = make([]int, 0)
 	for _, char := range input {
 		if char != ' ' && char != '\t' && char != '\n' && char != ';' && char != '\r' {
 			currentRaw += string(char)
@@ -58,12 +59,17 @@ func Lex(input string) ([]Token, int, []int, []int) {
 				var num, err = strconv.Atoi(currentRaw)
 				if err != nil {
 					if _, ok := uniqueIdents[currentRaw]; !ok {
-						uniqueIdents[currentRaw] = len(uniqueIdents)
+						uniqueIdents[currentRaw] = len(vars)
+						vars = append(vars, 0)
 					}
-					idents = append(idents, uniqueIdents[currentRaw])
+					valIndices = append(valIndices, uniqueIdents[currentRaw])
 					tokens = append(tokens, IDENT)
 				} else {
-					numbers = append(numbers, num)
+					if _, ok := uniqueNumbers[num]; !ok {
+						uniqueNumbers[num] = len(vars)
+						vars = append(vars, num)
+					}
+					valIndices = append(valIndices, uniqueNumbers[num])
 					tokens = append(tokens, NUM)
 				}
 			}
@@ -72,8 +78,8 @@ func Lex(input string) ([]Token, int, []int, []int) {
 	}
 	tokens = append(tokens, EOF)
 	fmt.Println(uniqueIdents)
-	//fmt.Println(idents)
-	return tokens, len(uniqueIdents), idents, numbers
+	//fmt.Println(valIndices)
+	return tokens, valIndices, vars
 }
 
 func (t Token) String() string {
