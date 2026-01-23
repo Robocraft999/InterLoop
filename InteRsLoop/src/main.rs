@@ -4,20 +4,21 @@ const SYNTAX_CHECK_ENABLED: bool = false;
 
 macro_rules! expect_token {
     ($inter:expr, $x:expr) => {
-        if SYNTAX_CHECK_ENABLED && Some(&$x) != $inter.current(){
+        if SYNTAX_CHECK_ENABLED && Some($x) != $inter.current(){
             unreachable!("Expected: {:?} but got: {:?}", $x, $inter.current());
         }
     };
 }
 
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 enum Token{
     Eof,
     Plus,
     Minus,
     Assign,
     Loop,
+    While,
     Do,
     End,
     Ident,
@@ -35,6 +36,7 @@ fn lex(input: &str) -> (Vec<Token>, Vec<usize>, Vec<usize>){
             "-" => Token::Minus,
             ":=" => Token::Assign,
             "LOOP" => Token::Loop,
+            "WHILE" => Token::While,
             "DO" => Token::Do,
             "END" => Token::End,
             num_or_ident => {
@@ -80,7 +82,7 @@ impl Interpreter {
     }
 
     fn interpret_statements(&mut self){
-        while let Some(tok) = self.current() && tok != &Token::End && tok != &Token::Eof{
+        while let Some(tok) = self.current() && tok != Token::End && tok != Token::Eof{
             self.interpret_statement();
         }
     }
@@ -88,29 +90,38 @@ impl Interpreter {
     fn interpret_statement(&mut self){
         let current = self.current();
         match current {
-            Some(Token::Loop) => {
+            Some(Token::Loop) | Some(Token::While) => {
                 self.index += 1;
 
                 expect_token!(self, Token::Ident);
                 self.index += 1;
 
-                let loop_amount_index = self.val_index;
+                let loop_val_index = self.val_index;
                 self.val_index += 1;
 
                 expect_token!(self, Token::Do);
                 self.index += 1;
 
-                let loop_amount = self.vars[self.val_indices[loop_amount_index]];
+                let loop_amount = self.vars[self.val_indices[loop_val_index]];
                 if loop_amount == 0{
                     self.jump_to_end();
                     return;
                 }
                 let current_index = self.index;
                 let current_val_index = self.val_index;
-                for _ in 0..loop_amount{
-                    self.index = current_index;
-                    self.val_index = current_val_index;
-                    self.interpret_statements();
+                if let Some(Token::Loop) = current{
+                    for _ in 0..loop_amount{
+                        self.index = current_index;
+                        self.val_index = current_val_index;
+                        self.interpret_statements();
+                    }
+                }
+                if let Some(Token::While) = current{
+                    while self.vars[self.val_indices[loop_val_index]] > 0{
+                        self.index = current_index;
+                        self.val_index = current_val_index;
+                        self.interpret_statements();
+                    }
                 }
 
                 expect_token!(self, Token::End);
@@ -153,12 +164,12 @@ impl Interpreter {
                 );*/
 
                 if is_add{
-                    self.vars[self.val_indices[current_ident_index]] = other_val + number
+                    self.vars[self.val_indices[current_ident_index]] = other_val.checked_add(number).expect("Overflowed add")
                 } else {
-                    self.vars[self.val_indices[current_ident_index]] = other_val - number
+                    self.vars[self.val_indices[current_ident_index]] = other_val.checked_sub(number).unwrap_or(0)
                 }
             }
-            tok => unreachable!("Expected LOOP or IDENT but got: {:?} at {}", tok, self.index)
+            tok => unreachable!("Expected LOOP, WHILE or IDENT but got: {:?} at {}", tok, self.index)
         }
     }
 
@@ -168,7 +179,7 @@ impl Interpreter {
         while count > 0{
             let tok = self.tokens.get(j);
             match tok {
-                Some(Token::Loop) => count += 1,
+                Some(Token::Loop) | Some(Token::While) => count += 1,
                 Some(Token::End) => count -= 1,
                 Some(Token::Ident) | Some(Token::Num) => self.val_index += 1,
                 _ => {}
@@ -178,8 +189,8 @@ impl Interpreter {
         self.index = j;
     }
 
-    fn current(&self) -> Option<&Token>{
-        self.tokens.get(self.index)
+    fn current(&self) -> Option<Token>{
+        self.tokens.get(self.index).copied()
     }
 }
 
