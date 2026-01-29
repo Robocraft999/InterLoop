@@ -67,8 +67,12 @@ enum Statement{
     SingleAssignment(VarIndex, VarIndex, Value, bool),
     // target, source, type (false = add)
     LoopAssignment(VarIndex, VarIndex, bool),
+    // target, constant
+    ConstAssignment(VarIndex, Value),
     // target, factor1, factor2
     Multiplication(VarIndex, VarIndex, VarIndex),
+    // condition, else_index
+    If(VarIndex, usize),
 }
 struct Parser {
     tokens: Vec<Token>,
@@ -161,11 +165,17 @@ impl Parser {
 
                 let pre_statement_count = self.statements.len();
                 self.parse_statements();
+                let post_statement_count = self.statements.len();
 
                 expect_token!(self, Token::End);
                 self.index += 1;
 
-                self.statements[pre_statement_count-1] = Statement::While(loop_var_index, self.statements.len());
+
+                if self.contains_var_reset(loop_var_index, &self.statements[pre_statement_count..]){
+                    self.statements[pre_statement_count-1] = Statement::If(loop_var_index, post_statement_count);
+                } else {
+                    self.statements[pre_statement_count-1] = Statement::While(loop_var_index, post_statement_count);
+                }
             }
             Some(Token::Ident) => {
                 self.index += 1;
@@ -192,7 +202,11 @@ impl Parser {
                 let constant = self.vars[self.var_indices[self.var_index]];
                 self.var_index += 1;
 
-                self.statements.push(Statement::SingleAssignment(target_index, source_index, constant, typ));
+                if self.is_zero_reg(source_index) && !typ && source_index != target_index{
+                    self.statements.push(Statement::ConstAssignment(target_index, constant))
+                } else {
+                    self.statements.push(Statement::SingleAssignment(target_index, source_index, constant, typ));
+                }
             }
             token => unreachable!("{:?} cannot be used as statement start", token),
         }
@@ -200,6 +214,24 @@ impl Parser {
 
     fn current(&self) -> Option<Token>{
         self.tokens.get(self.index).copied()
+    }
+
+    fn is_zero_reg(&self, reg_index: VarIndex) -> bool {
+        self.statements
+            .iter()
+            .filter(|s| if let Statement::SingleAssignment(reg, _, _, _) = s && reg == &reg_index {true} else {false})
+            .count() == 0
+    }
+
+    fn contains_var_reset(&self, var_index: VarIndex, stmts: &[Statement]) -> bool {
+        stmts
+            .iter()
+            .filter(|s|
+                if let Statement::ConstAssignment(target, constant) = s &&
+                    target == &var_index
+                {true} else {false}
+            )
+            .count() == 1
     }
 }
 
@@ -247,8 +279,19 @@ fn interpret(statements: &[Statement], vars: &mut Vec<Value>, start_index: usize
                 }
                 index += 1;
             }
+            Statement::ConstAssignment(target, constant) => {
+                vars[target] = constant;
+                index += 1;
+            }
             Statement::Multiplication(target, factor1, factor2) => {
                 vars[target] += vars[factor1] * vars[factor2];
+                index += 1;
+            }
+            Statement::If(cond, else_index) => {
+                if vars[cond] == 0 {
+                    index = else_index;
+                    continue
+                }
                 index += 1;
             }
         }
